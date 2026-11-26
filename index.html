@@ -1,11 +1,492 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IT Training Demo</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Training Demo</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #f8f8f8;
+      color: #21001f;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      max-width: 70rem;
+      margin: auto;
+      padding: 1rem;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: .75rem;
+      padding: 1rem;
+      margin-block: 1rem;
+      background: white;
+      border-radius: .5rem;
+    }
+
+    label {
+      display: grid;
+      gap: .25rem;
+    }
+
+    input, select, button {
+      min-height: 2.75rem;
+      padding: .5rem .75rem;
+      border: 1px solid #946e8f;
+      border-radius: .35rem;
+      background: white;
+      color: inherit;
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    input:focus-visible, select:focus-visible, button:focus-visible {
+      outline: 2px solid #69416a;
+      outline-offset: 2px;
+    }
+
+    #ticket-search-form button {
+      background: #ede9ef;
+      color: #382738;
+    }
+
+    #add-request-form button {
+      background: #69416a;
+      color: white;
+    }
+
+    #request-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .75rem;
+      margin-block: 1rem;
+    }
+
+    .summary-card {
+      display: grid;
+      gap: .25rem;
+      padding: .85rem 1rem;
+      border: 1px solid #e1cbe1;
+      border-radius: .5rem;
+      background: white;
+    }
+
+    .summary-card strong {
+      font-size: 1.5rem;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      background: white;
+      border: 1px solid #e1cbe1;
+      border-radius: .5rem;
+    }
+
+    table {
+      width: 100%;
+      min-width: 42rem;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: .65rem;
+      border-bottom: 1px solid #e7e7e7;
+    }
+
+    th {
+      background: #1d1f21;
+      color: white;
+    }
+
+    tbody tr:nth-child(even of :not([hidden])) {
+      background: #f0f5fa;
+    }
+
+    tbody tr:hover {
+      background: #e4e4e4;
+    }
+
+    .request-title {
+      max-width: 24rem;
+      overflow-wrap: anywhere;
+    }
+
+    .status-menu[data-status="New"] {
+      background: #dbeafe;
+      color: #1e3a8a;
+    }
+
+    .status-menu[data-status="In Progress"] {
+      background: #fef3c7;
+      color: #78350f;
+    }
+
+    .status-menu[data-status="Completed"] {
+      background: #dcfce7;
+      color: #14532d;
+    }
+
+    .delete-button {
+      border-color: #a52736;
+      color: #a52736;
+    }
+
+    .delete-button:hover {
+      background: #fff1f2;
+    }
+
+    #reset-demo {
+      margin-block: 1rem;
+    }
+
+    #request-error {
+      width: 100%;
+      margin: 0;
+      color: #9b1c1c;
+    }
+
+    #request-error:empty, #storage-message:empty {
+      display: none;
+    }
+
+    @media (max-width: 40rem) {
+      form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      form input, form select, form button {
+        width: 100%;
+      }
+
+      #request-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
 </head>
 <body>
-   <h1>IT Training Demo</h1> 
+  <main>
+    <h1>IT Training Demo</h1>
+    <h2 id="requests-heading">Support Requests</h2>
+
+    <p>Changes are stored in this browser and are not shared with other users.</p>
+    <p id="storage-message" role="status"></p>
+
+    <form id="ticket-search-form">
+      <label for="ticket-search">
+        Search by ID or title
+        <input type="search" id="ticket-search" placeholder="e.g. 002 or printer">
+      </label>
+
+      <label for="status-filter">
+        Filter by status
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option>New</option>
+          <option>In Progress</option>
+          <option>Completed</option>
+        </select>
+      </label>
+
+      <button type="submit">Search</button>
+    </form>
+
+    <form id="add-request-form" novalidate>
+      <label for="request-title">
+        Title
+        <input id="request-title" type="text" required aria-describedby="request-error">
+      </label>
+
+      <label for="request-category">
+        Category
+        <select id="request-category">
+          <option>Hardware</option>
+          <option>Software</option>
+          <option>Network</option>
+          <option>Account</option>
+        </select>
+      </label>
+
+      <label for="request-priority">
+        Priority
+        <select id="request-priority">
+          <option>Low</option>
+          <option selected>Medium</option>
+          <option>High</option>
+        </select>
+      </label>
+
+      <button type="submit">Add Request</button>
+      <p id="request-error" role="alert"></p>
+    </form>
+
+    <div id="request-summary" role="status" aria-label="Request summary">
+      <div class="summary-card">Total <strong id="count-total">0</strong></div>
+      <div class="summary-card">New <strong id="count-new">0</strong></div>
+      <div class="summary-card">In Progress <strong id="count-in-progress">0</strong></div>
+      <div class="summary-card">Completed <strong id="count-completed">0</strong></div>
+    </div>
+
+    <div class="table-wrapper" role="region" aria-labelledby="requests-heading" tabindex="0">
+      <table id="requests-table">
+        <thead>
+          <tr>
+            <th scope="col">Request ID</th>
+            <th scope="col">Title</th>
+            <th scope="col">Category</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <p id="no-results" role="status" hidden>No matching requests.</p>
+    <button type="button" id="reset-demo">Reset Demo Data</button>
+  </main>
+
+  <script>
+    const searchForm = document.getElementById("ticket-search-form");
+    const searchInput = document.getElementById("ticket-search");
+    const statusFilter = document.getElementById("status-filter");
+    const addForm = document.getElementById("add-request-form");
+    const titleInput = document.getElementById("request-title");
+    const categoryInput = document.getElementById("request-category");
+    const priorityInput = document.getElementById("request-priority");
+    const errorMessage = document.getElementById("request-error");
+    const storageMessage = document.getElementById("storage-message");
+    const totalCount = document.getElementById("count-total");
+    const newCount = document.getElementById("count-new");
+    const inProgressCount = document.getElementById("count-in-progress");
+    const completedCount = document.getElementById("count-completed");
+    const noResults = document.getElementById("no-results");
+    const resetButton = document.getElementById("reset-demo");
+    const tableBody = document.querySelector("#requests-table tbody");
+
+    const storageKey = "it-training-demo-requests";
+    const statuses = ["New", "In Progress", "Completed"];
+
+    const demoRequests = [
+      ["001", "Printer Error", "Hardware", "Medium", "New"],
+      ["002", "Network fail", "Hardware", "Medium", "New"],
+      ["003", "Wi-Fi keeps disconnecting", "Network", "High", "In Progress"],
+      ["004", "Email is not syncing", "Software", "Medium", "In Progress"],
+      ["005", "Monitor does not turn on", "Hardware", "High", "New"],
+      ["006", "Install office software", "Software", "Low", "Completed"],
+      ["007", "Keyboard keys are stuck", "Hardware", "Low", "New"],
+      ["008", "VPN does not connect", "Network", "High", "In Progress"],
+      ["009", "Reset a demo account password", "Account", "Medium", "Completed"],
+      ["010", "Headset microphone is muted", "Hardware", "Low", "Completed"]
+    ].map(function ([id, title, category, priority, status]) {
+      return { id, title, category, priority, status };
+    });
+
+    let requests = copyDemoRequests();
+    let nextRequestNumber = demoRequests.length + 1;
+
+    function copyDemoRequests() {
+      return demoRequests.map(function (request) {
+        return { ...request };
+      });
+    }
+
+    function saveRequests() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ requests, nextRequestNumber }));
+        storageMessage.textContent = "";
+      } catch {
+        storageMessage.textContent = "Changes could not be saved in this browser.";
+      }
+    }
+
+    function loadRequests() {
+      try {
+        const savedData = localStorage.getItem(storageKey);
+        if (savedData === null) return;
+
+        const saved = JSON.parse(savedData);
+        if (!Array.isArray(saved.requests)) {
+          throw new Error("Invalid saved requests");
+        }
+
+        const highestId = saved.requests.reduce(function (highest, request) {
+          return Math.max(highest, Number(request.id) || 0);
+        }, 0);
+
+        requests = saved.requests;
+        nextRequestNumber = Math.max(
+          highestId + 1,
+          Number.isSafeInteger(saved.nextRequestNumber) ? saved.nextRequestNumber : 1
+        );
+      } catch {
+        storageMessage.textContent = "Saved requests could not be loaded. Demo data is displayed.";
+      }
+    }
+
+    function updateSummaryCounts() {
+      const counts = { New: 0, "In Progress": 0, Completed: 0 };
+
+      for (const request of requests) {
+        counts[request.status] += 1;
+      }
+
+      totalCount.textContent = requests.length;
+      newCount.textContent = counts.New;
+      inProgressCount.textContent = counts["In Progress"];
+      completedCount.textContent = counts.Completed;
+    }
+
+    function filterRequests() {
+      const query = searchInput.value.trim().toLowerCase();
+      const selectedStatus = statusFilter.value;
+      let visibleCount = 0;
+
+      for (const [index, row] of Array.from(tableBody.rows).entries()) {
+        const request = requests[index];
+        const matchesSearch =
+          request.id === query || request.title.toLowerCase().includes(query);
+        const matchesStatus = selectedStatus === "" || request.status === selectedStatus;
+
+        row.hidden = !(matchesSearch && matchesStatus);
+        if (!row.hidden) visibleCount += 1;
+      }
+
+      noResults.hidden = visibleCount > 0;
+    }
+
+    function addRequestRow(request) {
+      const row = tableBody.insertRow();
+      row.insertCell().textContent = request.id;
+
+      const titleCell = row.insertCell();
+      titleCell.textContent = request.title;
+      titleCell.className = "request-title";
+
+      row.insertCell().textContent = request.category;
+      row.insertCell().textContent = request.priority;
+
+      const menu = document.createElement("select");
+      menu.className = "status-menu";
+      menu.setAttribute("aria-label", `Status for request ${request.id}`);
+
+      for (const status of statuses) {
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status;
+        menu.append(option);
+      }
+
+      menu.value = request.status;
+      menu.dataset.status = request.status;
+
+      menu.addEventListener("change", function () {
+        request.status = menu.value;
+        menu.dataset.status = request.status;
+        saveRequests();
+        updateSummaryCounts();
+        filterRequests();
+      });
+
+      row.insertCell().append(menu);
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "delete-button";
+      deleteButton.textContent = "Delete";
+      deleteButton.setAttribute("aria-label", `Delete request ${request.id}`);
+
+      deleteButton.addEventListener("click", function () {
+        if (window.confirm(`Delete request ${request.id}?`)) {
+          requests = requests.filter(function (item) {
+            return item.id !== request.id;
+          });
+          saveRequests();
+          renderRequests();
+        }
+      });
+
+      row.insertCell().append(deleteButton);
+    }
+
+    function renderRequests() {
+      tableBody.replaceChildren();
+      requests.forEach(addRequestRow);
+      updateSummaryCounts();
+      filterRequests();
+    }
+
+    searchForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      filterRequests();
+    });
+
+    statusFilter.addEventListener("change", filterRequests);
+
+    function clearTitleError() {
+      errorMessage.textContent = "";
+      titleInput.removeAttribute("aria-invalid");
+    }
+
+    titleInput.addEventListener("input", clearTitleError);
+
+    addForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const title = titleInput.value.trim();
+
+      if (title === "") {
+        errorMessage.textContent = "Please enter a request title.";
+        titleInput.setAttribute("aria-invalid", "true");
+        titleInput.focus();
+        return;
+      }
+
+      requests.push({
+        id: String(nextRequestNumber).padStart(3, "0"),
+        title,
+        category: categoryInput.value,
+        priority: priorityInput.value,
+        status: "New"
+      });
+      nextRequestNumber += 1;
+
+      saveRequests();
+      addForm.reset();
+      clearTitleError();
+      searchForm.reset();
+      renderRequests();
+    });
+
+    resetButton.addEventListener("click", function () {
+      if (window.confirm("Replace your saved changes with the 10 original demo requests?")) {
+        requests = copyDemoRequests();
+        nextRequestNumber = demoRequests.length + 1;
+        searchForm.reset();
+        addForm.reset();
+        clearTitleError();
+        saveRequests();
+        renderRequests();
+      }
+    });
+
+    loadRequests();
+    renderRequests();
+  </script>
 </body>
 </html>
